@@ -4,53 +4,143 @@
   <title>Fantasy Team Builder</title>
   <style>
     body { font-family: Arial; padding: 20px; }
-    h2 { margin-top: 30px; }
-    .player { padding: 5px; cursor: pointer; }
-    .selected { background-color: lightgreen; }
+
+    .player {
+      padding: 6px;
+      margin: 3px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 13px;
+    }
+
+    .selected { background: lightgreen; }
+    .active { background: lightblue; }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+    }
   </style>
 </head>
 
 <body>
 
 <h1>Fantasy Team Builder</h1>
-<p>Selected Players: <span id="count">0</span>/11</p>
 
+<input id="username" placeholder="Enter your name">
+<button onclick="saveTeam()">Save Team</button>
+
+<br><br>
+
+<select id="matchSelect" onchange="changeMatch()">
+  <option value="MI-RCB">MI vs RCB</option>
+  <option value="CSK-DC">CSK vs DC</option>
+</select>
+
+<p>Status: <span id="status"></span></p>
+<p>Time Left: <span id="countdown"></span></p>
+
+<p>Players: <span id="count">0</span>/11</p>
+<p>Captain: <span id="captain">None</span></p>
+<p>Vice Captain: <span id="vice">None</span></p>
+<p>Total Points: <span id="points">0</span></p>
+
+<button onclick="setCaptain()">Set Captain</button>
+<button onclick="setViceCaptain()">Set VC</button>
+
+<h2>My Team</h2>
+<div id="myTeam"></div>
+
+<h2>All Players</h2>
 <div id="players"></div>
+
+<h2>🏆 Leaderboard</h2>
+<div id="leaderboard"></div>
 
 <script>
 
 // ================= CONFIG =================
-const TeamA = "MI";
-const TeamB = "RCB";
+const BASE_URL = "https://script.google.com/macros/s/AKfycby0cXR_xQOae2Qv271c4VNGyh8rbOVf1YhhIvIagSuyYxKOUsACeYHzP1mkuHdLZOYZeA/exec";
+const PLAYERS_URL = BASE_URL + "?type=players";
+const LEADERBOARD_URL = BASE_URL + "?type=leaderboard";
 
-// Replace with your Google Sheet CSV link
-const sheetURL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRnVsV7RRdVqL-HrZNeHVfZqdhdONQIuDgAoYOQ3uhSElmLmH75Rde_K9o0vdQ__f2Pm0J9d42CTzC8/pub?gid=0&single=true&output=csv";
+const lockTime = new Date("2026-04-13T19:00:00");
 
-// ==========================================
+// DEFAULT MATCH
+let TeamA = "MI";
+let TeamB = "RCB";
 
+// ================= STATE =================
+let allPlayers = [];
 let selectedPlayers = [];
 let captain = null;
 let viceCaptain = null;
+let selectedForCV = null;
 
-// Fetch data
-fetch(sheetURL)
-.then(res => res.text())
-.then(data => {
-  const rows = data.split("\n").slice(1);
-  const players = rows.map(r => {
-    const [Player, Team, Role, Points] = r.split(",");
-    return { Player, Team, Role, Points: Number(Points) };
-  });
+// ================= LOCK =================
+function isLocked() {
+  return new Date() >= lockTime;
+}
 
-  // Filter match teams
-  const filtered = players.filter(p => p.Team === TeamA || p.Team === TeamB);
+// ================= TIMER =================
+setInterval(() => {
+  const diff = lockTime - new Date();
 
-  renderPlayers(filtered);
-});
+  if (diff <= 0) {
+    document.getElementById("status").innerText = "🔒 Locked";
+    document.getElementById("countdown").innerText = "00:00:00";
+    return;
+  }
 
-// Group by role
-function renderPlayers(players) {
-  const container = document.getElementById("players");
+  document.getElementById("status").innerText = "🟢 Open";
+
+  let h = Math.floor(diff/3600000);
+  let m = Math.floor((diff%3600000)/60000);
+  let s = Math.floor((diff%60000)/1000);
+
+  document.getElementById("countdown").innerText =
+    `${h}:${m}:${s}`;
+}, 1000);
+
+// ================= FETCH PLAYERS =================
+function fetchPlayers() {
+  fetch(PLAYERS_URL)
+    .then(res => res.json())
+    .then(data => {
+      allPlayers = data;
+
+      // Update selected players with latest points
+      selectedPlayers = selectedPlayers.map(sp =>
+        allPlayers.find(p => p.Player === sp.Player) || sp
+      );
+
+      updateUI();
+    });
+}
+
+setInterval(fetchPlayers, 10000);
+fetchPlayers();
+
+// ================= MATCH CHANGE =================
+function changeMatch() {
+  const val = document.getElementById("matchSelect").value;
+  const teams = val.split("-");
+
+  TeamA = teams[0];
+  TeamB = teams[1];
+
+  selectedPlayers = [];
+  captain = null;
+  viceCaptain = null;
+  selectedForCV = null;
+
+  updateUI();
+}
+
+// ================= RENDER PLAYERS =================
+function renderPlayers() {
 
   const roles = {
     "Wicketkeeper": [],
@@ -59,52 +149,196 @@ function renderPlayers(players) {
     "Bowler": []
   };
 
-  players.forEach(p => roles[p.Role]?.push(p));
+  const filtered = allPlayers.filter(p =>
+    p.Team === TeamA || p.Team === TeamB
+  );
+
+  filtered.forEach(p => roles[p.Role]?.push(p));
+
+  const container = document.getElementById("players");
+  container.innerHTML = "";
+
+  const grid = document.createElement("div");
+  grid.className = "grid";
 
   for (let role in roles) {
-    const section = document.createElement("div");
-    section.innerHTML = `<h2>${role}</h2>`;
+    const col = document.createElement("div");
+    col.innerHTML = `<h3>${role}</h3>`;
 
     roles[role].forEach(p => {
-      const div = document.createElement("div");
-      div.className = "player";
-      div.innerText = `${p.Player} (${p.Team}) - ${p.Points} pts`;
+      const d = document.createElement("div");
+      d.className = "player";
 
-      div.onclick = () => togglePlayer(p, div);
+      if (selectedPlayers.find(x => x.Player === p.Player))
+        d.classList.add("selected");
 
-      section.appendChild(div);
+      d.innerText = `${p.Player} (${p.Team}) - ${p.Points}`;
+      d.onclick = () => togglePlayer(p);
+
+      col.appendChild(d);
     });
 
-    container.appendChild(section);
+    grid.appendChild(col);
   }
+
+  container.appendChild(grid);
 }
 
-// Selection logic
-function togglePlayer(player, element) {
+// ================= MY TEAM =================
+function renderMyTeam() {
+  const c = document.getElementById("myTeam");
+  c.innerHTML = "";
 
-  const exists = selectedPlayers.find(p => p.Player === player.Player);
+  selectedPlayers.forEach(p => {
+    const d = document.createElement("div");
+    d.className = "player";
+
+    if (selectedForCV?.Player === p.Player)
+      d.classList.add("active");
+
+    let label = `${p.Player} (${p.Team}) - ${p.Points}`;
+
+    if (captain?.Player === p.Player) label += " (C)";
+    if (viceCaptain?.Player === p.Player) label += " (VC)";
+
+    d.innerText = label;
+
+    d.onclick = () => {
+      selectedForCV = p;
+      renderMyTeam();
+    };
+
+    c.appendChild(d);
+  });
+}
+
+// ================= SELECT =================
+function togglePlayer(p) {
+
+  if (isLocked()) return alert("Locked");
+
+  const exists = selectedPlayers.find(x => x.Player === p.Player);
 
   if (exists) {
-    selectedPlayers = selectedPlayers.filter(p => p.Player !== player.Player);
-    element.classList.remove("selected");
+    selectedPlayers = selectedPlayers.filter(x => x.Player !== p.Player);
+
+    if (captain?.Player === p.Player) captain = null;
+    if (viceCaptain?.Player === p.Player) viceCaptain = null;
+
   } else {
-    if (selectedPlayers.length >= 11) {
-      alert("Max 11 players allowed");
-      return;
-    }
 
-    const teamCount = selectedPlayers.filter(p => p.Team === player.Team).length;
-    if (teamCount >= 8) {
-      alert("Max 8 players from one team");
-      return;
-    }
+    if (selectedPlayers.length >= 11) return alert("Max 11");
 
-    selectedPlayers.push(player);
-    element.classList.add("selected");
+    const teamCount = selectedPlayers.filter(x => x.Team === p.Team).length;
+
+    if (teamCount >= 8) return alert("Max 8 from one team");
+
+    selectedPlayers.push(p);
   }
 
-  document.getElementById("count").innerText = selectedPlayers.length;
+  updateUI();
 }
+
+// ================= CAPTAIN =================
+function setCaptain() {
+  if (isLocked()) return alert("Locked");
+  if (!selectedForCV) return alert("Select player from My Team");
+
+  if (viceCaptain?.Player === selectedForCV.Player)
+    return alert("Different from VC");
+
+  captain = selectedForCV;
+  updateUI();
+}
+
+// ================= VC =================
+function setViceCaptain() {
+  if (isLocked()) return alert("Locked");
+  if (!selectedForCV) return alert("Select player from My Team");
+
+  if (captain?.Player === selectedForCV.Player)
+    return alert("Different from Captain");
+
+  viceCaptain = selectedForCV;
+  updateUI();
+}
+
+// ================= UPDATE UI =================
+function updateUI() {
+
+  document.getElementById("count").innerText = selectedPlayers.length;
+  document.getElementById("captain").innerText = captain?.Player || "None";
+  document.getElementById("vice").innerText = viceCaptain?.Player || "None";
+
+  let total = 0;
+
+  selectedPlayers.forEach(p => {
+    let pts = Number(p.Points);
+
+    if (captain?.Player === p.Player) pts *= 4;
+    else if (viceCaptain?.Player === p.Player) pts *= 2;
+
+    total += pts;
+  });
+
+  document.getElementById("points").innerText = total;
+
+  renderPlayers();
+  renderMyTeam();
+}
+
+// ================= SAVE TEAM =================
+function saveTeam() {
+
+  if (isLocked()) return alert("Team locked");
+
+  const name = document.getElementById("username").value;
+
+  if (!name) return alert("Enter name");
+
+  fetch(BASE_URL, {
+    method: "POST",
+    body: JSON.stringify({
+      name: name,
+      team: selectedPlayers,
+      points: document.getElementById("points").innerText
+    })
+  });
+
+  alert("Team saved!");
+}
+
+// ================= LEADERBOARD =================
+function loadLeaderboard() {
+
+  fetch(LEADERBOARD_URL)
+    .then(res => res.json())
+    .then(data => {
+
+      console.log("Leaderboard Data:", data); // 🔍 DEBUG
+
+      const cleanData = data.filter(p =>
+        p.Name && p.Name.trim() !== ""
+      );
+
+      cleanData.sort((a, b) => Number(b.Points) - Number(a.Points));
+
+      const container = document.getElementById("leaderboard");
+      container.innerHTML = "";
+
+      cleanData.forEach((p, i) => {
+        const div = document.createElement("div");
+        div.innerText = `${i+1}. ${p.Name} - ${p.Points} pts`;
+        container.appendChild(div);
+      });
+    })
+    .catch(err => {
+      console.error("Leaderboard Error:", err);
+    });
+}
+
+setInterval(loadLeaderboard,10000);
+loadLeaderboard();
 
 </script>
 
