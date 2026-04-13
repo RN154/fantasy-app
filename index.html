@@ -2,25 +2,77 @@
 <html>
 <head>
   <title>Fantasy Team Builder</title>
+
   <style>
-    body { font-family: Arial; padding: 20px; }
+    body { font-family: Arial; padding: 15px; background:#f5f7fb;}
+    h1 { text-align:center; }
 
     .player {
-      padding: 6px;
-      margin: 3px;
-      border: 1px solid #ccc;
-      border-radius: 5px;
-      cursor: pointer;
-      font-size: 13px;
+      padding:8px;
+      margin:5px;
+      border-radius:8px;
+      cursor:pointer;
+      font-size:13px;
+      background:white;
+      box-shadow:0 2px 6px rgba(0,0,0,0.1);
     }
 
-    .selected { background: lightgreen; }
-    .active { background: lightblue; }
+    .selected { background:#c8f7c5; }
+    .active { background:#d0e7ff; }
 
     .grid {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 10px;
+      display:grid;
+      grid-template-columns: repeat(4,1fr);
+      gap:10px;
+    }
+
+    @media (max-width: 768px) {
+  .grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  body {
+    padding: 10px;
+  }
+
+  h1 {
+    font-size: 20px;
+  }
+
+  .player {
+    font-size: 12px;
+    padding: 6px;
+  }
+
+  .card {
+    padding: 8px;
+  }
+
+  input, button, select {
+    width: 100%;
+    margin-top: 5px;
+  }
+}	
+
+    .card {
+      background:white;
+      padding:10px;
+      border-radius:12px;
+      margin-bottom:20px;
+      box-shadow:0 3px 8px rgba(0,0,0,0.1);
+    }
+
+    .leaderboard-card {
+      padding:10px;
+      margin:5px 0;
+      border-radius:10px;
+      background:white;
+      box-shadow:0 2px 6px rgba(0,0,0,0.1);
+      cursor:pointer;
+    }
+
+    .leaderboard-card:hover {
+      background:#f0f8ff;
     }
   </style>
 </head>
@@ -32,148 +84,133 @@
 <input id="username" placeholder="Enter your name">
 <button onclick="saveTeam()">Save Team</button>
 
-<br><br>
+<br>
 
 <select id="matchSelect" onchange="changeMatch()">
   <option value="MI-RCB">MI vs RCB</option>
   <option value="CSK-DC">CSK vs DC</option>
 </select>
 
-<p>Status: <span id="status"></span></p>
-<p>Time Left: <span id="countdown"></span></p>
-
 <p>Players: <span id="count">0</span>/11</p>
 <p>Captain: <span id="captain">None</span></p>
 <p>Vice Captain: <span id="vice">None</span></p>
 <p>Total Points: <span id="points">0</span></p>
+<p>⏳ Time left to lock: <b id="countdown">Loading...</b></p>
 
 <button onclick="setCaptain()">Set Captain</button>
 <button onclick="setViceCaptain()">Set VC</button>
 
+<div class="card">
 <h2>My Team</h2>
 <div id="myTeam"></div>
+</div>
 
+<div class="card">
 <h2>All Players</h2>
 <div id="players"></div>
+</div>
 
+<div class="card">
 <h2>🏆 Leaderboard</h2>
 <div id="leaderboard"></div>
+</div>
 
 <script>
 
-// ================= CONFIG =================
-const BASE_URL = "https://script.google.com/macros/s/AKfycby0cXR_xQOae2Qv271c4VNGyh8rbOVf1YhhIvIagSuyYxKOUsACeYHzP1mkuHdLZOYZeA/exec";
+// 🔗 URL
+const BASE_URL = "https://script.google.com/macros/s/AKfycbyxBMKofaiU0vd85p8_zsJjZKFHUnBdC0k55w0udAzw5XBXN84IwM8FzK6peJ8939XFVA/exec";
 const PLAYERS_URL = BASE_URL + "?type=players";
 const LEADERBOARD_URL = BASE_URL + "?type=leaderboard";
 
-const lockTime = new Date("2026-04-13T19:00:00");
+// TEAM COLORS
+const teamColors = {
+  "MI":"#004ba0",
+  "RCB":"#d71920",
+  "CSK":"#fdb913",
+  "DC":"#17449b"
+};
 
-// DEFAULT MATCH
-let TeamA = "MI";
-let TeamB = "RCB";
+// STATE
+let TeamA="MI";
+let TeamB="RCB";
 
-// ================= STATE =================
-let allPlayers = [];
-let selectedPlayers = [];
-let captain = null;
-let viceCaptain = null;
-let selectedForCV = null;
+let allPlayers=[];
+let selectedPlayers=[];
+let captain=null;
+let viceCaptain=null;
+let selectedForCV=null;
 
-// ================= LOCK =================
-function isLocked() {
-  return new Date() >= lockTime;
-}
-
-// ================= TIMER =================
-setInterval(() => {
-  const diff = lockTime - new Date();
-
-  if (diff <= 0) {
-    document.getElementById("status").innerText = "🔒 Locked";
-    document.getElementById("countdown").innerText = "00:00:00";
-    return;
-  }
-
-  document.getElementById("status").innerText = "🟢 Open";
-
-  let h = Math.floor(diff/3600000);
-  let m = Math.floor((diff%3600000)/60000);
-  let s = Math.floor((diff%60000)/1000);
-
-  document.getElementById("countdown").innerText =
-    `${h}:${m}:${s}`;
-}, 1000);
-
-// ================= FETCH PLAYERS =================
-function fetchPlayers() {
+// FETCH PLAYERS
+function fetchPlayers(){
   fetch(PLAYERS_URL)
-    .then(res => res.json())
-    .then(data => {
-      allPlayers = data;
+  .then(res=>res.json())
+  .then(data=>{
+    allPlayers=data;
 
-      // Update selected players with latest points
-      selectedPlayers = selectedPlayers.map(sp =>
-        allPlayers.find(p => p.Player === sp.Player) || sp
-      );
+    // 🔥 IMPORTANT: keep updated references
+    selectedPlayers = selectedPlayers.map(sp =>
+      allPlayers.find(p=>p.Player===sp.Player) || sp
+    );
 
-      updateUI();
-    });
+    updateUI();
+  });
 }
-
-setInterval(fetchPlayers, 10000);
+setInterval(fetchPlayers,10000);
 fetchPlayers();
 
-// ================= MATCH CHANGE =================
-function changeMatch() {
-  const val = document.getElementById("matchSelect").value;
-  const teams = val.split("-");
+// MATCH FILTER
+function changeMatch(){
+  const val=document.getElementById("matchSelect").value;
+  const t=val.split("-");
+  TeamA=t[0]; TeamB=t[1];
 
-  TeamA = teams[0];
-  TeamB = teams[1];
-
-  selectedPlayers = [];
-  captain = null;
-  viceCaptain = null;
-  selectedForCV = null;
+  selectedPlayers=[];
+  captain=null;
+  viceCaptain=null;
+  selectedForCV=null;
 
   updateUI();
 }
 
-// ================= RENDER PLAYERS =================
-function renderPlayers() {
+// RENDER PLAYERS ROLEWISE
+function renderPlayers(){
 
-  const roles = {
-    "Wicketkeeper": [],
-    "Batsman": [],
-    "Allrounder": [],
-    "Bowler": []
+  const roles={
+    "Wicketkeeper":[],
+    "Batsman":[],
+    "Allrounder":[],
+    "Bowler":[]
   };
 
   const filtered = allPlayers.filter(p =>
-    p.Team === TeamA || p.Team === TeamB
+    p.Team===TeamA || p.Team===TeamB
   );
 
-  filtered.forEach(p => roles[p.Role]?.push(p));
+  filtered.forEach(p=>roles[p.Role]?.push(p));
 
-  const container = document.getElementById("players");
-  container.innerHTML = "";
+  const container=document.getElementById("players");
+  container.innerHTML="";
 
-  const grid = document.createElement("div");
-  grid.className = "grid";
+  const grid=document.createElement("div");
+  grid.className="grid";
 
-  for (let role in roles) {
-    const col = document.createElement("div");
-    col.innerHTML = `<h3>${role}</h3>`;
+  for(let role in roles){
 
-    roles[role].forEach(p => {
-      const d = document.createElement("div");
-      d.className = "player";
+    const col=document.createElement("div");
+    col.innerHTML=`<h3>${role}</h3>`;
 
-      if (selectedPlayers.find(x => x.Player === p.Player))
+    roles[role].forEach(p=>{
+
+      const d=document.createElement("div");
+      d.className="player";
+
+      if(selectedPlayers.find(x=>x.Player===p.Player))
         d.classList.add("selected");
 
-      d.innerText = `${p.Player} (${p.Team}) - ${p.Points}`;
-      d.onclick = () => togglePlayer(p);
+      d.innerText=`${p.Player} - ${p.Points}`;
+      d.style.borderLeft=`5px solid ${teamColors[p.Team]||"gray"}`;
+
+      d.onclick=()=>togglePlayer(p);
 
       col.appendChild(d);
     });
@@ -184,27 +221,30 @@ function renderPlayers() {
   container.appendChild(grid);
 }
 
-// ================= MY TEAM =================
-function renderMyTeam() {
-  const c = document.getElementById("myTeam");
-  c.innerHTML = "";
+// MY TEAM
+function renderMyTeam(){
 
-  selectedPlayers.forEach(p => {
-    const d = document.createElement("div");
-    d.className = "player";
+  const c=document.getElementById("myTeam");
+  c.innerHTML="";
 
-    if (selectedForCV?.Player === p.Player)
+  selectedPlayers.forEach(p=>{
+
+    const d=document.createElement("div");
+    d.className="player";
+
+    if(selectedForCV?.Player===p.Player)
       d.classList.add("active");
 
-    let label = `${p.Player} (${p.Team}) - ${p.Points}`;
+    let label=`${p.Player} - ${p.Points}`;
 
-    if (captain?.Player === p.Player) label += " (C)";
-    if (viceCaptain?.Player === p.Player) label += " (VC)";
+    if(captain?.Player===p.Player) label+=" (C)";
+    if(viceCaptain?.Player===p.Player) label+=" (VC)";
 
-    d.innerText = label;
+    d.innerText=label;
+    d.style.borderLeft=`5px solid ${teamColors[p.Team]||"gray"}`;
 
-    d.onclick = () => {
-      selectedForCV = p;
+    d.onclick=()=>{
+      selectedForCV=p;
       renderMyTeam();
     };
 
@@ -212,26 +252,23 @@ function renderMyTeam() {
   });
 }
 
-// ================= SELECT =================
-function togglePlayer(p) {
+// SELECT PLAYER
+function togglePlayer(p){
 
-  if (isLocked()) return alert("Locked");
+  const exists=selectedPlayers.find(x=>x.Player===p.Player);
 
-  const exists = selectedPlayers.find(x => x.Player === p.Player);
+  if(exists){
+    selectedPlayers=selectedPlayers.filter(x=>x.Player!==p.Player);
 
-  if (exists) {
-    selectedPlayers = selectedPlayers.filter(x => x.Player !== p.Player);
-
-    if (captain?.Player === p.Player) captain = null;
-    if (viceCaptain?.Player === p.Player) viceCaptain = null;
+    if(captain?.Player===p.Player) captain=null;
+    if(viceCaptain?.Player===p.Player) viceCaptain=null;
 
   } else {
 
-    if (selectedPlayers.length >= 11) return alert("Max 11");
+    if(selectedPlayers.length>=11) return alert("Max 11");
 
-    const teamCount = selectedPlayers.filter(x => x.Team === p.Team).length;
-
-    if (teamCount >= 8) return alert("Max 8 from one team");
+    const teamCount=selectedPlayers.filter(x=>x.Team===p.Team).length;
+    if(teamCount>=8) return alert("Max 8 from one team");
 
     selectedPlayers.push(p);
   }
@@ -239,108 +276,194 @@ function togglePlayer(p) {
   updateUI();
 }
 
-// ================= CAPTAIN =================
-function setCaptain() {
-  if (isLocked()) return alert("Locked");
-  if (!selectedForCV) return alert("Select player from My Team");
+// CAPTAIN
+function setCaptain(){
+  if(!selectedForCV) return alert("Select from My Team");
+  if(viceCaptain?.Player===selectedForCV.Player) return alert("Different from VC");
 
-  if (viceCaptain?.Player === selectedForCV.Player)
-    return alert("Different from VC");
-
-  captain = selectedForCV;
+  captain=selectedForCV;
   updateUI();
 }
 
-// ================= VC =================
-function setViceCaptain() {
-  if (isLocked()) return alert("Locked");
-  if (!selectedForCV) return alert("Select player from My Team");
+// VC
+function setViceCaptain(){
+  if(!selectedForCV) return alert("Select from My Team");
+  if(captain?.Player===selectedForCV.Player) return alert("Different from Captain");
 
-  if (captain?.Player === selectedForCV.Player)
-    return alert("Different from Captain");
-
-  viceCaptain = selectedForCV;
+  viceCaptain=selectedForCV;
   updateUI();
 }
 
-// ================= UPDATE UI =================
-function updateUI() {
+// UPDATE UI
+function updateUI(){
 
-  document.getElementById("count").innerText = selectedPlayers.length;
-  document.getElementById("captain").innerText = captain?.Player || "None";
-  document.getElementById("vice").innerText = viceCaptain?.Player || "None";
+  document.getElementById("count").innerText=selectedPlayers.length;
+  document.getElementById("captain").innerText=captain?.Player||"None";
+  document.getElementById("vice").innerText=viceCaptain?.Player||"None";
 
-  let total = 0;
+  let total=0;
 
-  selectedPlayers.forEach(p => {
-    let pts = Number(p.Points);
+  selectedPlayers.forEach(p=>{
+    let pts=Number(p.Points);
 
-    if (captain?.Player === p.Player) pts *= 4;
-    else if (viceCaptain?.Player === p.Player) pts *= 2;
+    if(captain?.Player===p.Player) pts*=4;
+    else if(viceCaptain?.Player===p.Player) pts*=2;
 
-    total += pts;
+    total+=pts;
   });
 
-  document.getElementById("points").innerText = total;
+  document.getElementById("points").innerText=total;
 
   renderPlayers();
   renderMyTeam();
 }
 
-// ================= SAVE TEAM =================
-function saveTeam() {
+// SAVE TEAM (FINAL FIX)
+function saveTeam(){
 
-  if (isLocked()) return alert("Team locked");
+  const name=document.getElementById("username").value;
 
-  const name = document.getElementById("username").value;
+  if(!name) return alert("Enter name");
+  if(!captain) return alert("Select Captain");
+  if(!viceCaptain) return alert("Select Vice Captain");
 
-  if (!name) return alert("Enter name");
-
-  fetch(BASE_URL, {
-    method: "POST",
-    body: JSON.stringify({
-      name: name,
-      team: selectedPlayers,
-      points: document.getElementById("points").innerText
+  fetch(BASE_URL,{
+    method:"POST",
+    body:JSON.stringify({
+      name:name,
+      team:selectedPlayers,
+      captain:captain.Player,
+      viceCaptain:viceCaptain.Player,
+      points:document.getElementById("points").innerText
     })
   });
 
   alert("Team saved!");
 }
 
-// ================= LEADERBOARD =================
-function loadLeaderboard() {
-
-  fetch(LEADERBOARD_URL)
-    .then(res => res.json())
-    .then(data => {
-
-      console.log("Leaderboard Data:", data); // 🔍 DEBUG
-
-      const cleanData = data.filter(p =>
-        p.Name && p.Name.trim() !== ""
-      );
-
-      cleanData.sort((a, b) => Number(b.Points) - Number(a.Points));
-
-      const container = document.getElementById("leaderboard");
-      container.innerHTML = "";
-
-      cleanData.forEach((p, i) => {
-        const div = document.createElement("div");
-        div.innerText = `${i+1}. ${p.Name} - ${p.Points} pts`;
-        container.appendChild(div);
-      });
-    })
-    .catch(err => {
-      console.error("Leaderboard Error:", err);
-    });
+function isLocked(){
+  const now = new Date();
+  return now.getHours() >= 19; // 7 PM
 }
 
+function viewTeam(user){
+
+  console.log("Clicked:", user.Name); // 🔥 debug
+
+  if(!isLocked()){
+    alert("Teams will be visible after 7 PM ⏳");
+    return;
+  }
+
+  try{
+    const team = JSON.parse(user.Team);
+
+    const modal = document.getElementById("teamModal");
+    const content = document.getElementById("modalContent");
+
+    let html = `<h3>${user.Name}'s Team</h3>`;
+
+    team.forEach(p=>{
+      let line = p.Player;
+
+      if(p.Player === user.Captain) line += " (C)";
+      if(p.Player === user.ViceCaptain) line += " (VC)";
+
+      html += `<div>${line}</div>`;
+    });
+
+    content.innerHTML = html;
+    modal.style.display = "flex";
+
+  }catch(e){
+    alert("Error loading team");
+  }
+}
+
+function closeModal(){
+  document.getElementById("teamModal").style.display="none";
+}
+
+// LEADERBOARD
+function loadLeaderboard(){
+
+  fetch(LEADERBOARD_URL)
+  .then(res=>res.json())
+  .then(data=>{
+
+    const clean=data.filter(p=>p.Name);
+
+    clean.sort((a,b)=>Number(b.Points)-Number(a.Points));
+
+    const c=document.getElementById("leaderboard");
+    c.innerHTML="";
+
+    clean.forEach((p,i)=>{
+
+      let medal="";
+      if(i===0) medal="🥇 ";
+      else if(i===1) medal="🥈 ";
+      else if(i===2) medal="🥉 ";
+
+      const d=document.createElement("div");
+      d.className="leaderboard-card";
+
+      d.innerText=`${medal}${p.Name} - ${p.Points} pts`;
+      d.onclick = () => viewTeam(p);
+      c.appendChild(d);
+    });
+  });
+}
 setInterval(loadLeaderboard,10000);
 loadLeaderboard();
 
-</script>
+function updateCountdown(){
 
+  const now = new Date();
+
+  const lockTime = new Date();
+  lockTime.setHours(19, 0, 0, 0); // 7 PM
+
+  let diff = lockTime - now;
+
+  if(diff <= 0){
+    document.getElementById("countdown").innerText = "LOCKED 🔒";
+    return;
+  }
+
+  const hrs = Math.floor(diff / (1000 * 60 * 60));
+  const mins = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+  const secs = Math.floor((diff % (1000 * 60)) / 1000);
+
+  document.getElementById("countdown").innerText =
+    hrs + "h " + mins + "m " + secs + "s";
+}
+setInterval(updateCountdown, 1000);
+updateCountdown();
+</script>
+<div id="teamModal" style="
+  display:none;
+  position:fixed;
+  top:0; left:0;
+  width:100%; height:100%;
+  background:rgba(0,0,0,0.6);
+  justify-content:center;
+  align-items:center;
+">
+
+  <div style="
+    background:white;
+    padding:20px;
+    border-radius:12px;
+    width:90%;
+    max-width:400px;
+    max-height:80%;
+    overflow:auto;
+  ">
+    <button onclick="closeModal()" style="float:right;">❌</button>
+    <div id="modalContent"></div>
+  </div>
+
+</div>
 </body>
 </html>
