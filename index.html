@@ -465,24 +465,26 @@ loadLeaderboard();
 
 function updateCountdown(){
 
-  const now = new Date();
+  const el = document.getElementById("countdown");
+  if(!el) return; // 🔥 prevents crash
 
+  const now = new Date();
   const lockTime = new Date();
-  lockTime.setHours(19, 0, 0, 0); // 7 PM
+
+  lockTime.setHours(19,0,0,0);
 
   let diff = lockTime - now;
 
   if(diff <= 0){
-    document.getElementById("countdown").innerText = "LOCKED 🔒";
+    el.innerText = "LOCKED 🔒";
     return;
   }
 
-  const hrs = Math.floor(diff / (1000 * 60 * 60));
-  const mins = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-  const secs = Math.floor((diff % (1000 * 60)) / 1000);
+  const hrs = Math.floor(diff / (1000*60*60));
+  const mins = Math.floor((diff % (1000*60*60)) / (1000*60));
+  const secs = Math.floor((diff % (1000*60)) / 1000);
 
-  document.getElementById("countdown").innerText =
-    hrs + "h " + mins + "m " + secs + "s";
+  el.innerText = `${hrs}h ${mins}m ${secs}s`;
 }
 setInterval(updateCountdown, 1000);
 updateCountdown();
