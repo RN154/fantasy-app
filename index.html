@@ -178,13 +178,23 @@ function changeMatch(){
   updateUI();
 }
 
+function showPlayersAllowed(){
+
+  const now = new Date();
+  const hour = now.getHours();
+
+  return (hour >= 9 && hour < 19);
+}
+
 // RENDER PLAYERS ROLEWISE
 function renderPlayers(){
+
   const container=document.getElementById("players");
+  container.innerHTML="";
 
   // 🔒 Hide after 7 PM, show after 9 AM
   if(!showPlayersAllowed()){
-    container.innerHTML = "<h3 style='color:red'>🔒 Teams Locked. Come back after 9 AM</h3>";
+    container.innerHTML = "<h3 style='color:red'>🔒 Player selection closed (9 AM - 7 PM)</h3>";
     return;
   }
 
@@ -234,14 +244,6 @@ function renderPlayers(){
   container.appendChild(grid);
 }
 
-function showPlayersAllowed(){
-
-  const now = new Date();
-  const hour = now.getHours();
-
-  // Show only between 9 AM and 7 PM
-  return (hour >= 9 && hour < 19);
-}
 
 // MY TEAM
 function renderMyTeam(){
