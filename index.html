@@ -87,8 +87,8 @@
 <br>
 
 <select id="matchSelect" onchange="changeMatch()">
-  <option value="KKR-RR">KKR vs RR</option>
-  <option value="PBKS-LSG">PBKS vs LSG</option>
+  <option value="MI-RCB">MI vs RCB</option>
+  <option value="CSK-DC">CSK vs DC</option>
 </select>
 
 <p>Players: <span id="count">0</span>/11</p>
@@ -261,6 +261,11 @@ function renderMyTeam(){
 // SELECT PLAYER
 function togglePlayer(p){
 
+  if(isLocked()){
+  alert("Team is locked after 7 PM 🔒");
+  return;
+  }
+
   const exists=selectedPlayers.find(x=>x.Player===p.Player);
 
   if(exists){
@@ -284,6 +289,10 @@ function togglePlayer(p){
 
 // CAPTAIN
 function setCaptain(){
+  if(isLocked()){
+  alert("Team is locked after 7 PM 🔒");
+  return;
+  }
   if(!selectedForCV) return alert("Select from My Team");
   if(viceCaptain?.Player===selectedForCV.Player) return alert("Different from VC");
 
@@ -293,6 +302,10 @@ function setCaptain(){
 
 // VC
 function setViceCaptain(){
+  if(isLocked()){
+  alert("Team is locked after 7 PM 🔒");
+  return;
+  }
   if(!selectedForCV) return alert("Select from My Team");
   if(captain?.Player===selectedForCV.Player) return alert("Different from Captain");
 
@@ -326,6 +339,11 @@ function updateUI(){
 
 // SAVE TEAM (FINAL FIX)
 function saveTeam(){
+
+  if(isLocked()){
+    alert("Team is locked after 7 PM 🔒");
+    return;
+  }
 
   const name=document.getElementById("username").value;
 
