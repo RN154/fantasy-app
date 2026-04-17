@@ -260,6 +260,10 @@ function renderMyTeam(){
 
 // SELECT PLAYER
 function togglePlayer(p){
+  if(isLocked()){
+  alert("Team is locked after 7 PM 🔒");
+  return;
+  }
 
   const exists=selectedPlayers.find(x=>x.Player===p.Player);
 
@@ -284,6 +288,11 @@ function togglePlayer(p){
 
 // CAPTAIN
 function setCaptain(){
+  if(isLocked()){
+  alert("Team is locked after 7 PM 🔒");
+  return;
+  }
+
   if(!selectedForCV) return alert("Select from My Team");
   if(viceCaptain?.Player===selectedForCV.Player) return alert("Different from VC");
 
@@ -293,6 +302,11 @@ function setCaptain(){
 
 // VC
 function setViceCaptain(){
+  if(isLocked()){
+  alert("Team is locked after 7 PM 🔒");
+  return;
+  }
+
   if(!selectedForCV) return alert("Select from My Team");
   if(captain?.Player===selectedForCV.Player) return alert("Different from Captain");
 
@@ -327,6 +341,11 @@ function updateUI(){
 // SAVE TEAM (FINAL FIX)
 function saveTeam(){
 
+  if(isLocked()){
+    alert("Team is locked after 7 PM 🔒");
+    return;
+  }
+
   const name=document.getElementById("username").value;
 
   if(!name) return alert("Enter name");
@@ -349,7 +368,11 @@ function saveTeam(){
 
 function isLocked(){
   const now = new Date();
-  return now.getHours() >= 19; // 7 PM
+
+  const lockTime = new Date();
+  lockTime.setHours(19,0,0,0); // 7 PM today
+
+  return now >= lockTime;
 }
 
 function viewTeam(user){
