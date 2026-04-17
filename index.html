@@ -367,7 +367,11 @@ function saveTeam(){
 
 function isLocked(){
   const now = new Date();
-  return now.getHours() >= 19; // 7 PM
+
+  const lockTime = new Date();
+  lockTime.setHours(19,0,0,0); // 7 PM today
+
+  return now >= lockTime;
 }
 
 function viewTeam(user){
