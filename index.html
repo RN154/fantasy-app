@@ -87,8 +87,8 @@
 <br>
 
 <select id="matchSelect" onchange="changeMatch()">
-  <option value="SRH-CSK">SRH vs CSK</option>
-  <option value="KKR-RR">KKR vs RR</option>
+  <option value="MI-RCB">MI vs RCB</option>
+  <option value="CSK-DC">CSK vs DC</option>
 </select>
 
 <p>Players: <span id="count">0</span>/11</p>
@@ -178,25 +178,8 @@ function changeMatch(){
   updateUI();
 }
 
-function showPlayersAllowed(){
-
-  const now = new Date();
-  const hour = now.getHours();
-
-  return (hour >= 9 && hour < 19);
-}
-
 // RENDER PLAYERS ROLEWISE
 function renderPlayers(){
-
-  const container=document.getElementById("players");
-  container.innerHTML="";
-
-  // 🔒 Hide after 7 PM, show after 9 AM
-  if(!showPlayersAllowed()){
-    container.innerHTML = "<h3 style='color:red'>🔒 Player selection closed (9 AM - 7 PM)</h3>";
-    return;
-  }
 
   const roles={
     "Wicketkeeper":[],
@@ -244,7 +227,6 @@ function renderPlayers(){
   container.appendChild(grid);
 }
 
-
 // MY TEAM
 function renderMyTeam(){
 
@@ -279,11 +261,6 @@ function renderMyTeam(){
 // SELECT PLAYER
 function togglePlayer(p){
 
-  if(isLocked()){
-  alert("Team is locked after 7 PM 🔒");
-  return;
-  }
-
   const exists=selectedPlayers.find(x=>x.Player===p.Player);
 
   if(exists){
@@ -307,10 +284,6 @@ function togglePlayer(p){
 
 // CAPTAIN
 function setCaptain(){
-  if(isLocked()){
-  alert("Team is locked after 7 PM 🔒");
-  return;
-  }
   if(!selectedForCV) return alert("Select from My Team");
   if(viceCaptain?.Player===selectedForCV.Player) return alert("Different from VC");
 
@@ -320,10 +293,6 @@ function setCaptain(){
 
 // VC
 function setViceCaptain(){
-  if(isLocked()){
-  alert("Team is locked after 7 PM 🔒");
-  return;
-  }
   if(!selectedForCV) return alert("Select from My Team");
   if(captain?.Player===selectedForCV.Player) return alert("Different from Captain");
 
@@ -358,11 +327,6 @@ function updateUI(){
 // SAVE TEAM (FINAL FIX)
 function saveTeam(){
 
-  if(isLocked()){
-    alert("Team is locked after 7 PM 🔒");
-    return;
-  }
-
   const name=document.getElementById("username").value;
 
   if(!name) return alert("Enter name");
@@ -385,11 +349,7 @@ function saveTeam(){
 
 function isLocked(){
   const now = new Date();
-
-  const lockTime = new Date();
-  lockTime.setHours(19,0,0,0); // 7 PM today
-
-  return now >= lockTime;
+  return now.getHours() >= 19; // 7 PM
 }
 
 function viewTeam(user){
@@ -465,26 +425,24 @@ loadLeaderboard();
 
 function updateCountdown(){
 
-  const el = document.getElementById("countdown");
-  if(!el) return; // 🔥 prevents crash
-
   const now = new Date();
-  const lockTime = new Date();
 
-  lockTime.setHours(19,0,0,0);
+  const lockTime = new Date();
+  lockTime.setHours(19, 0, 0, 0); // 7 PM
 
   let diff = lockTime - now;
 
   if(diff <= 0){
-    el.innerText = "LOCKED 🔒";
+    document.getElementById("countdown").innerText = "LOCKED 🔒";
     return;
   }
 
-  const hrs = Math.floor(diff / (1000*60*60));
-  const mins = Math.floor((diff % (1000*60*60)) / (1000*60));
-  const secs = Math.floor((diff % (1000*60)) / 1000);
+  const hrs = Math.floor(diff / (1000 * 60 * 60));
+  const mins = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+  const secs = Math.floor((diff % (1000 * 60)) / 1000);
 
-  el.innerText = `${hrs}h ${mins}m ${secs}s`;
+  document.getElementById("countdown").innerText =
+    hrs + "h " + mins + "m " + secs + "s";
 }
 setInterval(updateCountdown, 1000);
 updateCountdown();
