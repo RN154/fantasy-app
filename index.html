@@ -513,6 +513,10 @@ function loadLeaderboard(){
 setInterval(loadLeaderboard,10000);
 loadLeaderboard();
 
+window.onload = function(){
+  changeMatch();
+};
+
 function updateCountdown(){
 
   const now = new Date();
