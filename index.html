@@ -441,12 +441,17 @@ function saveTeam(){
 }
 
 function isLocked(){
+
   const now = new Date();
 
-  const lockTime = new Date();
-  lockTime.setHours(19,0,0,0); // 7 PM today
+  // Convert to IST manually
+  const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
+  const istTime = new Date(utc + (5.5 * 60 * 60 * 1000)); // IST offset
 
-  return now >= lockTime;
+  const lockTime = new Date(istTime);
+  lockTime.setHours(19,0,0,0); // 7 PM IST
+
+  return istTime >= lockTime;
 }
 
 function viewTeam(user){
@@ -536,10 +541,13 @@ function updateCountdown(){
 
   const now = new Date();
 
-  const lockTime = new Date();
-  lockTime.setHours(19, 0, 0, 0); // 7 PM
+  const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
+  const istTime = new Date(utc + (5.5 * 60 * 60 * 1000));
 
-  let diff = lockTime - now;
+  const lockTime = new Date(istTime);
+  lockTime.setHours(19, 0, 0, 0);
+
+  let diff = lockTime - istTime;
 
   if(diff <= 0){
     document.getElementById("countdown").innerText = "LOCKED 🔒";
