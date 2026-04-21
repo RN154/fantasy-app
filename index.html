@@ -133,11 +133,15 @@
     <b>Bowling</b>
     <p>🏏 Wicket: 25</p>
     <p>🔥 LBW/Bowled: +10</p>
+    <p>🧱 Maiden Over: +10</p>
+    <p>🎖️ 3 Wicket Haul: +20</p>
+    <p>🏅 4 Wicket Haul: +30</p>
   </div>
 
   <div class="points-section">
     <b>Fielding</b>
     <p>🧤 Catch: +10</p>
+    <p>⚡ Stumping: +10</p>
     <p>🎯 Direct Runout: +10</p>
     <p>🤝 Combined Runout: +5 each</p>
   </div>
@@ -145,6 +149,8 @@
   <div class="points-section">
     <b>Others</b>
     <p>✅ Playing XI: +4</p>
+    <p>✅ Captain: x 2</p>
+    <p>✅ Vice-Captain: x 1.5</p>
   </div>
 </div>
 
@@ -393,8 +399,8 @@ function updateUI(){
   selectedPlayers.forEach(p=>{
     let pts=Number(p.Points);
 
-    if(captain?.Player===p.Player) pts*=4;
-    else if(viceCaptain?.Player===p.Player) pts*=2;
+    if(captain?.Player===p.Player) pts*=2;
+    else if(viceCaptain?.Player===p.Player) pts*=1.5;
 
     total+=pts;
   });
@@ -444,8 +450,6 @@ function isLocked(){
 
 function viewTeam(user){
 
-  console.log("Clicked:", user.Name); // 🔥 debug
-
   if(!isLocked()){
     alert("Teams will be visible after 7 PM ⏳");
     return;
@@ -460,12 +464,21 @@ function viewTeam(user){
     let html = `<h3>${user.Name}'s Team</h3>`;
 
     team.forEach(p=>{
-      let line = p.Player;
 
-      if(p.Player === user.Captain) line += " (C)";
-      if(p.Player === user.ViceCaptain) line += " (VC)";
+      // 🔥 find latest points from allPlayers
+      const latest = allPlayers.find(x => x.Player === p.Player);
+      let pts = latest ? Number(latest.Points) : 0;
 
-      html += `<div>${line}</div>`;
+      // apply multipliers
+      if(p.Player === user.Captain) pts *= 2;
+      else if(p.Player === user.ViceCaptain) pts *= 1.5;
+
+      let line = `${p.Player} - ${pts} pts`;
+
+      if(p.Player === user.Captain) line += " 🏆 (C)";
+      if(p.Player === user.ViceCaptain) line += " 🥈 (VC)";
+
+      html += `<div style="padding:4px 0;">${line}</div>`;
     });
 
     content.innerHTML = html;
