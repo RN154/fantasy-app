@@ -402,7 +402,7 @@ function updateUI(){
     if(captain?.Player===p.Player) pts*=2;
     else if(viceCaptain?.Player===p.Player) pts*=1.5;
 
-    total+=pts;
+    total += total.toFixed(1);
   });
 
   document.getElementById("points").innerText=total;
@@ -472,6 +472,7 @@ function viewTeam(user){
       // apply multipliers
       if(p.Player === user.Captain) pts *= 2;
       else if(p.Player === user.ViceCaptain) pts *= 1.5;
+      pts = pts.toFixed(1);
 
       let line = `${p.Player} - ${pts} pts`;
 
