@@ -402,8 +402,9 @@ function updateUI(){
     if(captain?.Player===p.Player) pts*=2;
     else if(viceCaptain?.Player===p.Player) pts*=1.5;
 
-    total += total.toFixed(1);
+    total+= pts;
   });
+  total = total.toFixed(1);
 
   document.getElementById("points").innerText=total;
 
